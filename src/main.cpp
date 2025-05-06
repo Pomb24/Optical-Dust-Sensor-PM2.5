@@ -7,7 +7,7 @@ const int samplingTime = 280;
 const float sensitivity = 0.005; 
 const float vCleanAir = 0.9;  
 unsigned long lastDataTime = 0;
-const int samplingInterval = 100;
+const int samplingInterval = 1000;
 
 float readDustDensity() {
   float voMeasured = 0;
@@ -40,6 +40,5 @@ void loop() {
         float dustDensity = readDustDensity();
         Serial.print(dustDensity, 2);
         Serial.println();
-  } 
-      delay(1000);
+  }
 }
