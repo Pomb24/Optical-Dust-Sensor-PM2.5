@@ -1,55 +1,45 @@
-#include <Arduino.h>
-#include <BME280I2C.h>
-#include <Wire.h>
+#include <Arduino.h>                              // Include the Arduino library
 
-BME280I2C bme;
+#define DUST_LED_PIN PA8 
+#define DUST_ANALOG_PIN PA7
 
-void setup() {
-  Serial.begin(115200);
+const int samplingTime = 280; 
+const float sensitivity = 0.005; 
+const float vCleanAir = 0.9;  
+unsigned long lastDataTime = 0;
+const int samplingInterval = 100;
 
-  while(!Serial) {} // Wait
+float readDustDensity() {
+  float voMeasured = 0;
+  float calcVoltage = 0;
+  float dustDensity = 0;
 
-  Wire.begin();
-
-  while(!bme.begin())
-  {
-    Serial.println("Could not find BME280 sensor!");
-    delay(1000);
-  }
-
-  switch(bme.chipModel())
-  {
-     case BME280::ChipModel_BME280:
-       Serial.println("Found BME280 sensor! Success.");
-       break;
-     case BME280::ChipModel_BMP280:
-       Serial.println("Found BMP280 sensor! No Humidity available.");
-       break;
-     default:
-       Serial.println("Found UNKNOWN sensor! Error!");
-  }
+  digitalWrite(DUST_LED_PIN, LOW);
+  delayMicroseconds(samplingTime);
+  voMeasured = analogRead(DUST_ANALOG_PIN);
+digitalWrite(DUST_LED_PIN, HIGH);
+  calcVoltage = voMeasured * (5.0 / 1024.0);
+  dustDensity = (calcVoltage - vCleanAir) / sensitivity;
+  if (dustDensity < 0) dustDensity = 0;
+  return dustDensity;
 }
-void loop()
-{
-  {
-    float temp(NAN), hum(NAN), pres(NAN);
+void setup(){
+  pinMode(DUST_LED_PIN, OUTPUT);
+  digitalWrite(DUST_LED_PIN, HIGH);
+  pinMode(DUST_ANALOG_PIN, INPUT);
 
-   BME280::TempUnit tempUnit(BME280::TempUnit_Celsius);
-   BME280::PresUnit presUnit(BME280::PresUnit_Pa);
+  Serial.begin(115200);
+}
 
-   bme.read(pres, temp, hum, tempUnit, presUnit);
- 
-    Serial.print("Temp: ");
-    Serial.print(temp);
-    Serial.print("°"+ String(tempUnit == BME280::TempUnit_Celsius ? "C" :"F"));
-    Serial.print("\t\tHumidity: ");
-    Serial.print(hum);
-    Serial.print("% RH");
-    Serial.print("\t\tPressure: ");
-    Serial.print(pres);
-    Serial.println("Pa"); // expected hPa and Pa only
-    
-    delay(1000);
-  }
-  delay(500);
+void loop() {
+  unsigned long currentTime = millis();
+
+  if (currentTime - lastDataTime >= samplingInterval) {
+    lastDataTime = currentTime;
+
+        float dustDensity = readDustDensity();
+        Serial.print(dustDensity, 2);
+        Serial.println();
+  } 
+      delay(1000);
 }
